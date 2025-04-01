@@ -1,0 +1,19 @@
+version: '3'
+
+networks:
+  default:
+    external:
+      name: supabase-network
+
+services:
+  cloudflared:
+    container_name: cloudflared
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    volumes:
+      - ./cloudflared:/etc/cloudflared
+    depends_on:
+      - traefik

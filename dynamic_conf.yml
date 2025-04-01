@@ -1,0 +1,206 @@
+# dynamic_conf.yml - Dynamic configuration for Traefik
+http:
+  middlewares:
+    # Global security headers
+    security-headers:
+      headers:
+        frameDeny: true
+        sslRedirect: true
+        browserXssFilter: true
+        contentTypeNosniff: true
+        stsIncludeSubdomains: true
+        stsPreload: true
+        stsSeconds: 31536000
+    
+    # Compression middleware
+    compress:
+      compress: {}
+    
+    # SearXNG specific headers
+    searxng-headers:
+      headers:
+        customResponseHeaders:
+          Content-Security-Policy: "upgrade-insecure-requests; default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; form-action 'self' https://github.com/searxng/searxng/issues/new; font-src 'self'; frame-ancestors 'self'; base-uri 'self'; connect-src 'self' https://overpass-api.de; img-src * data:; frame-src https://www.youtube-nocookie.com https://player.vimeo.com https://www.dailymotion.com https://www.deezer.com https://www.mixcloud.com https://w.soundcloud.com https://embed.spotify.com;"
+          Permissions-Policy: "accelerometer=(),camera=(),geolocation=(),gyroscope=(),magnetometer=(),microphone=(),payment=(),usb=()"
+          Referrer-Policy: "no-referrer"
+          Strict-Transport-Security: "max-age=31536000"
+          X-Content-Type-Options: "nosniff"
+          X-Robots-Tag: "noindex, noarchive, nofollow"
+    
+    # Dashboard auth (optional but recommended for production)
+    dashboard-auth:
+      basicAuth:
+        users:
+          - "admin:$apr1$ruca84Hq$mbjdMZBAG.KWn7vfN/SNK/" # admin:password - change this!
+    
+    # Cache policies for SearXNG
+    searxng-cache-default:
+      headers:
+        customResponseHeaders:
+          Cache-Control: "max-age=0, no-store"
+    
+    searxng-cache-search:
+      headers:
+        customResponseHeaders:
+          Cache-Control: "max-age=5, private"
+    
+    searxng-cache-image:
+      headers:
+        customResponseHeaders:
+          Cache-Control: "max-age=604800, public"
+    
+    searxng-cache-static:
+      headers:
+        customResponseHeaders:
+          Cache-Control: "max-age=31536000, public, immutable"
+    
+    # CORS middleware for SearXNG API
+    searxng-api-cors:
+      headers:
+        accessControlAllowMethods: "GET, OPTIONS"
+        accessControlAllowOriginList: "*"
+
+  routers:
+    # N8N Router
+    n8n:
+      rule: "Host(`n8n.localhost`)"
+      service: n8n
+      entryPoints:
+        - web
+      middlewares:
+        - security-headers
+        - compress
+    
+    # Open WebUI Router
+    webui:
+      rule: "Host(`webui.localhost`)"
+      service: webui
+      entryPoints:
+        - web
+      middlewares:
+        - security-headers
+        - compress
+    
+    # Flowise Router
+    flowise:
+      rule: "Host(`flowise.localhost`)"
+      service: flowise
+      entryPoints:
+        - web
+      middlewares:
+        - security-headers
+        - compress
+    
+    # Ollama API Router
+    ollama:
+      rule: "Host(`ollama.localhost`)"
+      service: ollama
+      entryPoints:
+        - web
+      middlewares:
+        - security-headers
+        - compress
+    
+    # Supabase Router
+    supabase:
+      rule: "Host(`supabase.localhost`)"
+      service: supabase
+      entryPoints:
+        - web
+      middlewares:
+        - security-headers
+        - compress
+    
+    # SearXNG Router with complex configuration
+    searxng:
+      rule: "Host(`searxng.localhost`)"
+      service: searxng
+      entryPoints:
+        - web
+      middlewares:
+        - searxng-headers
+        - compress
+    
+    # SearXNG API routes
+    searxng-api:
+      rule: "Host(`searxng.localhost`) && (Path(`/config`) || Path(`/healthz`) || Path(`/stats/errors`) || Path(`/stats/checker`))"
+      service: searxng
+      entryPoints:
+        - web
+      middlewares:
+        - searxng-headers
+        - searxng-cache-default
+        - searxng-api-cors
+    
+    # SearXNG Search route
+    searxng-search:
+      rule: "Host(`searxng.localhost`) && Path(`/search`)"
+      service: searxng
+      entryPoints:
+        - web
+      middlewares:
+        - searxng-headers
+        - searxng-cache-search
+    
+    # SearXNG Image proxy route
+    searxng-image:
+      rule: "Host(`searxng.localhost`) && Path(`/image_proxy`)"
+      service: searxng
+      entryPoints:
+        - web
+      middlewares:
+        - searxng-headers
+        - searxng-cache-image
+    
+    # SearXNG Static files route
+    searxng-static:
+      rule: "Host(`searxng.localhost`) && PathPrefix(`/static/`)"
+      service: searxng
+      entryPoints:
+        - web
+      middlewares:
+        - searxng-headers
+        - searxng-cache-static
+    
+    # Traefik Dashboard (optional) - Disabled for now
+    # dashboard:
+    #   rule: "Host(`traefik.localhost`)"
+    #   service: api@internal
+    #   entryPoints:
+    #     - traefik
+    #   middlewares:
+    #     - dashboard-auth
+
+  services:
+    n8n:
+      loadBalancer:
+        servers:
+          - url: "http://0.0.0.0:5678"
+    
+    webui:
+      loadBalancer:
+        servers:
+          - url: "http://0.0.0.0:3000"
+    
+    flowise:
+      loadBalancer:
+        servers:
+          - url: "http://0.0.0.0:3001"
+    
+    ollama:
+      loadBalancer:
+        servers:
+          - url: "http://0.0.0.0:11434"
+    
+    supabase:
+      loadBalancer:
+        servers:
+          - url: "http://0.0.0.0:8000"
+    
+    searxng:
+      loadBalancer:
+        servers:
+          - url: "http://0.0.0.0:8080"
+        passHostHeader: true
+        responseForwarding:
+          flushInterval: "100ms"

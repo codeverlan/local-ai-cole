@@ -1,0 +1,41 @@
+# traefik.yml - Static configuration for Traefik
+global:
+  checkNewVersion: true
+  sendAnonymousUsage: false
+
+log:
+  level: "INFO"
+
+entryPoints:
+  web:
+    address: ":80"
+  websecure:
+    address: ":443"
+
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: "${LETSENCRYPT_EMAIL}"
+      storage: "/data/acme.json"
+      httpChallenge:
+        entryPoint: web
+
+providers:
+  file:
+    filename: "/etc/traefik/dynamic_conf.yml"
+    watch: true
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+    network: "supabase-network"
+
+# API and dashboard disabled
+# api:
+#   dashboard: true
+#   insecure: true
+
+accessLog: {}
+
+# Metrics disabled
+# metrics:
+#   prometheus: {}

@@ -1,0 +1,12 @@
+# Cloudflared configuration file
+tunnel: ${CLOUDFLARE_TUNNEL_ID}
+credentials-file: /etc/cloudflared/credentials.json
+
+# Ingress rules define how traffic is routed to your services
+ingress:
+  # Route traffic to Traefik
+  - hostname: "*.${DOMAIN}"
+    service: http://traefik:80
+  
+  # Default catch-all rule
+  - service: http_status:404
