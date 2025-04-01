@@ -1,7 +1,23 @@
+# Ignore model files (they can be large)
+models/*
+!models/.gitkeep
+
+# Ignore environment-specific files
 .env
-.env.test
-volumes/
-shared/
-supabase/
-searxng/uwsgi.ini
-searxng/settings.yml
+
+# Ignore data directories
+ollama_storage/
+n8n_storage/
+qdrant_storage/
+open-webui/
+flowise/
+caddy-data/
+caddy-config/
+valkey-data/
+
+# Ignore logs
+*.log
+
+# Ignore system files
+.DS_Store
+Thumbs.db
